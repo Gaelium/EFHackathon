@@ -1,8 +1,13 @@
-numpy==1.24.3
-Flask==2.2.2
+numpy
+Flask
 langchain-community
 langchain
 langchain-core
 langchain-openai
 faiss-cpu
 tiktoken
+unstructured
+unstructured[pdf]
+boto3
+slack
+slackeventsapi

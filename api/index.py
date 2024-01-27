@@ -8,22 +8,78 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+import boto3
+from unstructured.partition.auto import partition
+from flask import Flask, Response
+from slackeventsapi import SlackEventAdapter
+from threading import Thread
+from slack import WebClient
+
+
+os.environ["OPENAI_API_KEY"] = ""
+os.environ["AWS_ACCESS_KEY_ID"] = ""
+os.environ["AWS_SECRET_ACCESS_KEY"] = ""
+os.environ["SLACK_BOT_TOKEN"] = "xoxb-6543887761044-6543939519892-S3LTIe6Qmyd0a5NGuzUYC3wF"
+os.environ["SLACK_SIGNING_SECRET"] = "c5b7e8a16cc1ee9851459f6958adf327"
+LOCAL_DOWNLOAD_PATH = 'downloads'
+os.makedirs(LOCAL_DOWNLOAD_PATH, exist_ok=True)
+
+BUCKET_NAME = 'defaultefhackathon'
+s3_client = boto3.client('s3')
 
 app = Flask(__name__)
-#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
 @app.route("/api/upload", methods=["POST"])
 def upload():
-    files = request.files.getlist('files')
+    file = request.files["file"]
+    if file:
+        # S3 path where file will be uploaded
+        file_path_in_s3 = f"{file.filename}"
 
-    #handle no file part
-    if len(files) == 0:
-        return "No file part"
+        # Upload file to S3
+        s3_client.upload_fileobj(
+            file,
+            BUCKET_NAME,
+            file_path_in_s3
+        )
+        return jsonify({"message": "File uploaded successfully to S3"})
+
+    return jsonify({"message": "No file found"})
+
     
+
+def list_files_in_bucket(bucket_name):
+    """List files in an S3 bucket."""
+    files = s3_client.list_objects_v2(Bucket=bucket_name)
+    return [file['Key'] for file in files.get('Contents', [])]
+
+def download_file(bucket_name, s3_file_key, local_path):
+    """Download a file from S3 to a local path."""
+    s3_client.download_file(bucket_name, s3_file_key, local_path)
 
 @app.route("/api/chat")
 def chat():
+    # get files from uploads folder
+    files = list_files_in_bucket(BUCKET_NAME)
+    texts = []
+    text = ""
+    # Process each file
+    for s3_file_key in files:
+        local_file_path = os.path.join(LOCAL_DOWNLOAD_PATH, os.path.basename(s3_file_key))
+        download_file(BUCKET_NAME, s3_file_key, local_file_path)
+
+    # use unstructed to get the text from the files
+    files = os.listdir(LOCAL_DOWNLOAD_PATH)
+    for file in files:
+        elements = partition(LOCAL_DOWNLOAD_PATH + "/" + file)
+        for element in elements:
+            text += str(element) + " "
+        texts.append(text)
+    
+    print(text)
+
+
     vectorstore = FAISS.from_texts(
-        ["harrison worked at kensho"], embedding=OpenAIEmbeddings()
+        texts, embedding=OpenAIEmbeddings()
     )
     retriever = vectorstore.as_retriever()
 
@@ -43,7 +99,7 @@ def chat():
         | StrOutputParser()
     )
 
-    message = chain.invoke("where did harrison work?")
+    message = chain.invoke("What is the pricing of the new large embedding model?")
     return "<p>" + message + "</p>"
 
 
