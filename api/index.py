@@ -10,10 +10,17 @@ from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 import boto3
 from unstructured.partition.auto import partition
+from flask import Flask, Response
+from slackeventsapi import SlackEventAdapter
+from threading import Thread
+from slack import WebClient
+
 
 os.environ["OPENAI_API_KEY"] = ""
 os.environ["AWS_ACCESS_KEY_ID"] = ""
 os.environ["AWS_SECRET_ACCESS_KEY"] = ""
+os.environ["SLACK_BOT_TOKEN"] = "xoxb-6543887761044-6543939519892-S3LTIe6Qmyd0a5NGuzUYC3wF"
+os.environ["SLACK_SIGNING_SECRET"] = "c5b7e8a16cc1ee9851459f6958adf327"
 LOCAL_DOWNLOAD_PATH = 'downloads'
 os.makedirs(LOCAL_DOWNLOAD_PATH, exist_ok=True)
 
