@@ -11,6 +11,7 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 import boto3
 from unstructured.partition.auto import partition
 from flask import Flask, Response
+from flask_cors import CORS
 from threading import Thread
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 from requests_aws4auth import AWS4Auth
@@ -45,6 +46,8 @@ BUCKET_NAME = 'defaultefhackathon'
 s3_client = boto3.client('s3')
 
 app = Flask(__name__)
+CORS(app)
+
 @app.route("/api/upload", methods=["POST"])
 def upload():
     print("uploading file")
