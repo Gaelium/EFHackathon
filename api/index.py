@@ -8,22 +8,37 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
+from unstructured.partition.auto import partition
 
 app = Flask(__name__)
-#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
 @app.route("/api/upload", methods=["POST"])
 def upload():
-    files = request.files.getlist('files')
+    file = request.files["file"]
+    
+    #save file
+    file.save(os.path.join("uploads", file.filename))
 
-    #handle no file part
-    if len(files) == 0:
-        return "No file part"
     
 
 @app.route("/api/chat")
 def chat():
+    # get files from uploads folder
+    files = os.listdir("uploads")
+
+    # use unstructed to get the text from the files
+    texts = []
+    text = ""
+    for file in files:
+        elements = partition(file)
+        for element in elements:
+            text += str(element) + " "
+        texts.append(text)
+    
+    print(text)
+
+
     vectorstore = FAISS.from_texts(
-        ["harrison worked at kensho"], embedding=OpenAIEmbeddings()
+        texts, embedding=OpenAIEmbeddings()
     )
     retriever = vectorstore.as_retriever()
 
@@ -43,7 +58,7 @@ def chat():
         | StrOutputParser()
     )
 
-    message = chain.invoke("where did harrison work?")
+    message = chain.invoke("What is the pricing of the new large embedding model?")
     return "<p>" + message + "</p>"
 
 
