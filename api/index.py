@@ -46,7 +46,7 @@ BUCKET_NAME = 'defaultefhackathon'
 s3_client = boto3.client('s3')
 
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 
 @app.route("/api/upload", methods=["POST"])
 def upload():
