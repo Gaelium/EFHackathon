@@ -21,7 +21,14 @@ We've all had that dreading feeling: you vaguely remember a piece of documentati
 
 ## How It Works
 Files, either by a company or employee for said company, get uploaded to Redoct. Additonally, the company/team slack is connected by a slackbot. The slackbot is added to necessary channels and scrapes all messages into a text file. This text file and the uploaded files get sent to AWS S3, which will be stored for analysis. 
-When an employee asks a question to the Redoct chatbot, it uses embeddings to search through internal data and provide a succint answer, relying on ChatGPT in some parts.   
+When an employee asks a question to the Redoct chatbot, it uses embeddings to search through internal data and provide a succint answer, relying on ChatGPT in some parts.  
+
+## Demo
+
+
+https://github.com/Gaelium/EFHackathon/assets/38620265/8787f2d7-9125-4316-a930-19913cc1d69d
+
+
 
 ## Running
 1) npm install
