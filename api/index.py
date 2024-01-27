@@ -9,10 +9,18 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from unstructured.partition.auto import partition
+from flask import Flask, Response
+from slackeventsapi import SlackEventAdapter
+from threading import Thread
+from slack import WebClient
+
 
 os.environ["OPENAI_API_KEY"] = "sk-<your key here>"
 UPLOAD_FOLDER = 'uploads'
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+os.environ["SLACK_BOT_TOKEN"] = "xoxb-6543887761044-6543939519892-S3LTIe6Qmyd0a5NGuzUYC3wF"
+os.environ["SLACK_SIGNING_SECRET"] = "c5b7e8a16cc1ee9851459f6958adf327"
 
 
 app = Flask(__name__)
