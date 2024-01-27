@@ -10,13 +10,20 @@ from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 from unstructured.partition.auto import partition
 
+os.environ["OPENAI_API_KEY"] = "sk-<your key here>"
+UPLOAD_FOLDER = 'uploads'
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+
 app = Flask(__name__)
 @app.route("/api/upload", methods=["POST"])
 def upload():
     file = request.files["file"]
-    
+    print(file)
     #save file
     file.save(os.path.join("uploads", file.filename))
+
+    return jsonify({"message": "File uploaded successfully"})
 
     
 
@@ -29,7 +36,7 @@ def chat():
     texts = []
     text = ""
     for file in files:
-        elements = partition(file)
+        elements = partition(UPLOAD_FOLDER + "/" + file)
         for element in elements:
             text += str(element) + " "
         texts.append(text)

@@ -6,3 +6,5 @@ langchain-core
 langchain-openai
 faiss-cpu
 tiktoken
+unstructured
+unstructured[pdf]
