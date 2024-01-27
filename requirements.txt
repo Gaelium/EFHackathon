@@ -10,7 +10,6 @@ unstructured
 unstructured[pdf]
 boto3
 slack_sdk
-elasticsearch
 requests_aws4auth
 elasticsearch==7.13.4
 flask_cors

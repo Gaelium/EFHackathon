@@ -21,7 +21,6 @@ from slack_sdk.errors import SlackApiError
 
 
 
-
 region = 'us-east-2'  # e.g., 'us-west-1'
 service = 'es'
 awsauth = AWS4Auth(os.environ["AWS_ACCESS_KEY_ID"], os.environ["AWS_SECRET_ACCESS_KEY"], region, service)

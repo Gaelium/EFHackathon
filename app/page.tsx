@@ -32,7 +32,7 @@ const Home = () => {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-24">
       <h1 className="mt-4 mb-2 text-2xl font-bold text-gray-700 tracking-wide">
-        Insert App Title Here
+        Redoct
       </h1>
       <div className="mb-6 italic text-slate-700">
         Subtitle here - some slogan or vision for the company
