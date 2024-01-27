@@ -79,7 +79,7 @@ const Home = () => {
 					disabled={file == null}
 					onClick={() => handleStartChatting()}
 					className="bg-gray-300 mt-5 cursor-pointer hover:bg-gray-400 text-gray-800 font-bold py-3 px-5 rounded inline-flex items-center">
-					<span className="font-semibold">Start Chatting</span>
+					<span className="font-bold">Start Chatting</span>
 				</button>
 			</div>
 		</main>
