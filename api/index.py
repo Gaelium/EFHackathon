@@ -47,6 +47,7 @@ s3_client = boto3.client('s3')
 app = Flask(__name__)
 @app.route("/api/upload", methods=["POST"])
 def upload():
+    print("uploading file")
     file = request.files["file"]
     if file:
         # S3 path where file will be uploaded
