@@ -11,16 +11,33 @@ from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 import boto3
 from unstructured.partition.auto import partition
 from flask import Flask, Response
-from slackeventsapi import SlackEventAdapter
 from threading import Thread
-from slack import WebClient
+from elasticsearch import Elasticsearch, RequestsHttpConnection
+from requests_aws4auth import AWS4Auth
 
 
-os.environ["OPENAI_API_KEY"] = ""
-os.environ["AWS_ACCESS_KEY_ID"] = ""
-os.environ["AWS_SECRET_ACCESS_KEY"] = ""
-os.environ["SLACK_BOT_TOKEN"] = "xoxb-6543887761044-6543939519892-S3LTIe6Qmyd0a5NGuzUYC3wF"
-os.environ["SLACK_SIGNING_SECRET"] = "c5b7e8a16cc1ee9851459f6958adf327"
+
+#os.environ["SLACK_BOT_TOKEN"] = "xoxb-6543887761044-6543939519892-S3LTIe6Qmyd0a5NGuzUYC3wF"
+#os.environ["SLACK_SIGNING_SECRET"] = "c5b7e8a16cc1ee9851459f6958adf327"
+
+region = 'us-east-2'  # e.g., 'us-west-1'
+service = 'es'
+awsauth = AWS4Auth(os.environ["AWS_ACCESS_KEY_ID"], os.environ["AWS_SECRET_ACCESS_KEY"], region, service)
+
+# OpenSearch Service configuration
+host = 'vpc-efhackathon-5rob5xakxqvslsdyqhoz5s5dbq.us-east-2.es.amazonaws.com'  # e.g., 'search-mydomain.us-west-1.es.amazonaws.com'
+index_name = 'text_documents'
+type_name = '_doc'
+
+#Elasticsearch instance
+es = Elasticsearch(
+    hosts=[{'host': host, 'port': 443}],
+    http_auth=awsauth,
+    use_ssl=True,
+    verify_certs=True,
+    connection_class=RequestsHttpConnection
+)
+
 LOCAL_DOWNLOAD_PATH = 'downloads'
 os.makedirs(LOCAL_DOWNLOAD_PATH, exist_ok=True)
 
@@ -56,9 +73,40 @@ def download_file(bucket_name, s3_file_key, local_path):
     """Download a file from S3 to a local path."""
     s3_client.download_file(bucket_name, s3_file_key, local_path)
 
-@app.route("/api/chat")
-def chat():
+def search_documents(query):
+    """Perform a full-text search in the OpenSearch index."""
+    search_body = {
+        "query": {
+            "match": {
+                "text": query
+            }
+        }
+    }
+    response = es.search(index=index_name, body=search_body)
+    return response['hits']['hits']
+
+def process_search_query(query):
+    search_results = search_documents(query)
+
+    relevant_documents = []
+    for result in search_results:
+        document_id = result['_id']
+        document_text = result['_source']['text']
+        relevant_documents.append((document_id, document_text))
+
+    # Now you have a list of relevant documents (document_id, document_text)
+    # You can further process these documents or send them to your RAG chain
+
+    return relevant_documents
+
+@app.route("/api/chat", methods=["POST"])
+def chat(): 
     # get files from uploads folder
+    #the query is just the body of the request
+    data = request.get_json()
+
+    # Extract the 'message' field
+    query = data.get('message', '')
     files = list_files_in_bucket(BUCKET_NAME)
     texts = []
     text = ""
@@ -99,10 +147,5 @@ def chat():
         | StrOutputParser()
     )
 
-    message = chain.invoke("What is the pricing of the new large embedding model?")
-    return "<p>" + message + "</p>"
-
-
-@app.route("/api/python")
-def hello_world():
-    return "<p>Hello, World!</p>"
+    message = chain.invoke(query)
+    return jsonify({"message": message})
