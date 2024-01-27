@@ -1,4 +1,4 @@
-from flask import Flask, request, session, jsonify
+from flask import Flask, request, session, jsonify, Response
 from operator import itemgetter
 import requests
 import json
@@ -10,14 +10,16 @@ from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 import boto3
 from unstructured.partition.auto import partition
-from flask import Flask, Response
 from flask_cors import CORS
 from threading import Thread
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 from requests_aws4auth import AWS4Auth
 
-#os.environ["SLACK_BOT_TOKEN"] = "xoxb-6543887761044-6543939519892-S3LTIe6Qmyd0a5NGuzUYC3wF"
-#os.environ["SLACK_SIGNING_SECRET"] = "c5b7e8a16cc1ee9851459f6958adf327"
+import logging
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
+
+
 
 region = 'us-east-2'  # e.g., 'us-west-1'
 service = 'es'
@@ -151,3 +153,43 @@ def chat():
 
     message = chain.invoke(query)
     return jsonify({"message": message})
+
+
+
+@app.route("/api/slack", methods=["POST"])
+def slack():
+    f = open("channel_messages.txt", "w")
+
+    slack_token = 
+    os.environ["SLACK_BOT_TOKEN"] = slack_token
+    client = WebClient(token=slack_token)
+    logger = logging.getLogger(__name__)
+
+    conversation_history = []
+    channel_lists = client.conversations_list()
+    for channel in channel_lists["channels"]:
+        try:
+            result = client.conversations_history(channel=channel["id"])
+            conversation_history = result["messages"]
+            for message in conversation_history:
+                if not message["text"].endswith("has joined the channel"):
+                    f.write(message["text"])
+                    f.write("\n")
+            
+        except SlackApiError as e:
+            logger.error("Error creating conversation: {}".format(e))
+    f.close()
+
+    if f:
+        # S3 path where file will be uploaded
+        file_path_in_s3 = f"{f.filename}"
+
+        # Upload file to S3
+        s3_client.upload_fileobj(
+            f,
+            BUCKET_NAME,
+            file_path_in_s3
+        )
+        return jsonify({"message": "File uploaded successfully to S3"})
+
+    return jsonify({"message": "No file found"})
