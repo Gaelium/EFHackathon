@@ -11,3 +11,6 @@ unstructured[pdf]
 boto3
 slack
 slackeventsapi
+elasticsearch
+requests_aws4auth
+elasticsearch==7.13.4
