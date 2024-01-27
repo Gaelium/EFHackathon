@@ -16,28 +16,28 @@ from threading import Thread
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 from requests_aws4auth import AWS4Auth
 
-
-
-#os.environ["SLACK_BOT_TOKEN"] = "xoxb-6543887761044-6543939519892-S3LTIe6Qmyd0a5NGuzUYC3wF"
-#os.environ["SLACK_SIGNING_SECRET"] = "c5b7e8a16cc1ee9851459f6958adf327"
-
 region = 'us-east-2'  # e.g., 'us-west-1'
 service = 'es'
 awsauth = AWS4Auth(os.environ["AWS_ACCESS_KEY_ID"], os.environ["AWS_SECRET_ACCESS_KEY"], region, service)
 
-# OpenSearch Service configuration
-host = 'vpc-efhackathon-5rob5xakxqvslsdyqhoz5s5dbq.us-east-2.es.amazonaws.com'  # e.g., 'search-mydomain.us-west-1.es.amazonaws.com'
+# ... [previous code] ...
+
+# Corrected OpenSearch Service configuration
+host = 'search-hackathon-qnnu5nwwyydblg2pnmb5ej2po4.us-east-2.es.amazonaws.com'
 index_name = 'text_documents'
 type_name = '_doc'
-
-#Elasticsearch instance
+master_username = 'ccappy'  # Replace with your master username
+master_password = 'Pecky123!'
+# Corrected Elasticsearch instance setup
 es = Elasticsearch(
     hosts=[{'host': host, 'port': 443}],
-    http_auth=awsauth,
+    http_auth=(master_username, master_password),
     use_ssl=True,
     verify_certs=True,
     connection_class=RequestsHttpConnection
 )
+
+# ... [rest of your code] ...
 
 LOCAL_DOWNLOAD_PATH = 'downloads'
 os.makedirs(LOCAL_DOWNLOAD_PATH, exist_ok=True)
@@ -48,20 +48,33 @@ s3_client = boto3.client('s3')
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
 
+
+import base64
+
+def index_file_content_to_opensearch(file_key):
+    file_obj = s3_client.get_object(Bucket=BUCKET_NAME, Key=file_key)
+    file_content = file_obj['Body'].read()
+
+    # Encode the binary content in base64
+    encoded_content = base64.b64encode(file_content).decode('utf-8')
+
+    document = {"content": encoded_content}
+    es.index(index=index_name, doc_type=type_name, body=document)
+
+
 @app.route("/api/upload", methods=["POST"])
 def upload():
     file = request.files["file"]
     if file:
-        # S3 path where file will be uploaded
         file_path_in_s3 = f"{file.filename}"
-
+        
         # Upload file to S3
-        s3_client.upload_fileobj(
-            file,
-            BUCKET_NAME,
-            file_path_in_s3
-        )
-        return jsonify({"message": "File uploaded successfully to S3"})
+        s3_client.upload_fileobj(file, BUCKET_NAME, file_path_in_s3)
+
+        # Index file content to OpenSearch
+        index_file_content_to_opensearch(file_path_in_s3)
+
+        return jsonify({"message": "File uploaded and indexed successfully"})
 
     return jsonify({"message": "No file found"})
 
@@ -104,12 +117,18 @@ def process_search_query(query):
 
 @app.route("/api/chat", methods=["POST"])
 def chat(): 
+
     # get files from uploads folder
     #the query is just the body of the request
     data = request.get_json()
 
     # Extract the 'message' field
     query = data.get('message', '')
+
+    # get relevant documents
+    relevant_documents = process_search_query(query)
+    print(relevant_documents)
+
     files = list_files_in_bucket(BUCKET_NAME)
     texts = []
     text = ""
@@ -125,8 +144,6 @@ def chat():
         for element in elements:
             text += str(element) + " "
         texts.append(text)
-    
-    print(text)
 
 
     vectorstore = FAISS.from_texts(
@@ -140,8 +157,8 @@ def chat():
     Question: {question}
     """
     prompt = ChatPromptTemplate.from_template(template)
-
-    model = ChatOpenAI()
+    #use
+    model = ChatOpenAI(model="gpt-4-1106-preview")
 
     chain = (
         {"context": retriever, "question": RunnablePassthrough()}
