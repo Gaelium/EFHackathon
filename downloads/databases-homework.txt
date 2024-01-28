@@ -1,0 +1,41 @@
+UTCS: Modern Web Apps - Fall 2023
+
+No due date
+
+
+1) What is the difference between a primary key and a foreign key?
+
+2) Consider that we are building an email system in which we want to support a feature where we can attach
+   arbitrary tags to emails. An email can have multiple tags and multiple emails can have the same tag.
+   For example, consider following three emails with subject and tags.
+   Subject               Tags
+   Assignment 3          UT, Modern Web apps
+   Study group           UT
+   Black Friday          Shopping
+
+   Using SQL Alchemy Define tables with appropriate columns to enable following queries:
+   - Find all emails corresponding to a specific tag
+   - Find all tags for a particular email
+
+3) Using SQLAlchemy write following queries:
+   - Insert an email with following subject and tag ("Finals", "UT")
+   - Query email subjects that have the tag "UT"
+
+4) Explain with an example what is a SQLAlchemy Session?
+
+5) Explain with an example what is the join operation in SQL 
+
+6) True or False
+    a. Auto incrementing column is a good candidate for primary key column
+    b. An object that is created but not yet added to a Session is considered to be in 'transient' state
+    c. An object that is added to a Session but not yet committed to database is considered to be in 'transient' state.
+    d. Given an object's id, we can retrieve the object using either the 'get' method or 'filter_by' filter predicate in SQLAlchemy.
+    e. A database transaction/SQLAlchemy session ensures that the simultaneous database operations don't leave the database tables in an inconsistent state. 
+
+7) In your assignment3, suppose we wanted to support update operation on adminresource.
+   It should be possible to update the password of the admin, but not name.
+   Write the code for this method. Show the REST endpoint, HTTP method.
+   What error checks will you include in your implementation?
+
+
+

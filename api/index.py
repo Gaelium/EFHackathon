@@ -1,4 +1,4 @@
-from flask import Flask, request, session, jsonify
+from flask import Flask, request, session, jsonify, Response
 from operator import itemgetter
 import requests
 import json
@@ -10,11 +10,14 @@ from langchain_core.runnables import RunnableLambda, RunnablePassthrough
 from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 import boto3
 from unstructured.partition.auto import partition
-from flask import Flask, Response
 from flask_cors import CORS
 from threading import Thread
 from elasticsearch import Elasticsearch, RequestsHttpConnection
 from requests_aws4auth import AWS4Auth
+
+import logging
+from slack_sdk import WebClient
+from slack_sdk.errors import SlackApiError
 
 region = 'us-east-2'  # e.g., 'us-west-1'
 service = 'es'
@@ -64,6 +67,7 @@ def index_file_content_to_opensearch(file_key):
 
 @app.route("/api/upload", methods=["POST"])
 def upload():
+    print("uploading file")
     file = request.files["file"]
     if file:
         file_path_in_s3 = f"{file.filename}"
@@ -71,8 +75,6 @@ def upload():
         # Upload file to S3
         s3_client.upload_fileobj(file, BUCKET_NAME, file_path_in_s3)
 
-        # Index file content to OpenSearch
-        index_file_content_to_opensearch(file_path_in_s3)
 
         return jsonify({"message": "File uploaded and indexed successfully"})
 
@@ -125,11 +127,8 @@ def chat():
     # Extract the 'message' field
     query = data.get('message', '')
 
-    # get relevant documents
-    relevant_documents = process_search_query(query)
-    print(relevant_documents)
-
     files = list_files_in_bucket(BUCKET_NAME)
+    print(files)
     texts = []
     text = ""
     # Process each file
@@ -145,6 +144,7 @@ def chat():
             text += str(element) + " "
         texts.append(text)
 
+    print(texts)
 
     vectorstore = FAISS.from_texts(
         texts, embedding=OpenAIEmbeddings()
@@ -169,3 +169,36 @@ def chat():
 
     message = chain.invoke(query)
     return jsonify({"message": message})
+
+
+
+@app.route("/api/slack")
+def slack():
+    file_name = "channel_messages.txt"
+    with open(file_name, "w") as f:
+        slack_token = "xoxb-6543887761044-6541467149635-cTWCHuzrDyaYNb6bu8CYPtp1"  # Use your actual token
+        os.environ["SLACK_BOT_TOKEN"] = slack_token
+        client = WebClient(token=slack_token)
+        logger = logging.getLogger(__name__)
+
+        try:
+            channel_lists = client.conversations_list()
+            for channel in channel_lists["channels"]:
+                result = client.conversations_history(channel=channel["id"])
+                conversation_history = result["messages"]
+                for message in conversation_history:
+                    if not message["text"].endswith("has joined the channel"):
+                        f.write(message["text"])
+                        f.write("\n")
+        except SlackApiError as e:
+            logger.error(f"Error creating conversation: {e}")
+            return jsonify({"message": f"Error: {e}"})
+
+    # Upload file to S3
+    s3_client = boto3.client('s3')
+    try:
+        s3_client.upload_file(file_name, BUCKET_NAME, file_name)
+        return jsonify({"message": "File uploaded successfully to S3"})
+    except Exception as e:
+        logger.error(f"Error uploading to S3: {e}")
+        return jsonify({"message": f"Error uploading to S3: {e}"})

@@ -1,6 +1,12 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import axios from "axios";
+interface File {
+  name: string;
+  size: number;
+}
+
 const Home = () => {
   const router = useRouter();
   const [file, setFile] = useState(null);
@@ -14,28 +20,31 @@ const Home = () => {
   // handle start chatting
   const handleStartChatting = async () => {
     // do something with the file
-    console.log("file: ", file);
     const formData = new FormData();
     formData.append("file", file);
 
     const response = await fetch("/api/upload", {
       method: "POST",
+      mode: "cors",
+      cache: "no-cache",
+      credentials: "same-origin",
       body: formData,
-      mode: "no-cors",
     });
 
-    router.push("/chat");
+    let files: File[] = JSON.parse(localStorage.getItem("files") || "[]");
+    files.push({ name: file?.name, size: file?.size });
+    localStorage.setItem("files", JSON.stringify(files));
 
-    // send the file to backend here!
+    router.push("/chat");
   };
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-24">
-      <h1 className="mt-4 mb-2 text-2xl font-bold text-gray-700 tracking-wide">
-        Insert App Title Here
+      <h1 className="mt-4 mb-2 text-3xl font-bold text-slate-700 tracking-wide">
+        Redoct
       </h1>
-      <div className="mb-6 italic text-slate-700">
-        Subtitle here - some slogan or vision for the company
+      <div className="mb-6 text-md italic text-slate-700">
+        Get your company's documents to reply!
       </div>
 
       <div className="flex flex-col items-center justify-center w-3/4">
@@ -80,7 +89,7 @@ const Home = () => {
                 {file?.name}
               </div>
               <div className="mt-2 text-xs text-gray-500 italic">
-                {(file?.size / 1000).toFixed(2)} MB
+                {(file?.size / 1000000).toFixed(2)} MB
               </div>
             </div>
           )}
